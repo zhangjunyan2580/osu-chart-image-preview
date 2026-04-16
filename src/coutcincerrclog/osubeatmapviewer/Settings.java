@@ -4,15 +4,19 @@ import java.io.*;
 
 public class Settings {
 
-    public static int MOD_EZ = 0;
-    public static int MOD_NM = 1;
-    public static int MOD_HR = 2;
+    public static final int MOD_EZ = 0;
+    public static final int MOD_NM = 1;
+    public static final int MOD_HR = 2;
+    public static final int MOD_HT = 0;
+    public static final int MOD_DT = 2;
 
     public int convertMode = 2;
     public boolean maniaColorBySnap = true;
     public boolean catchOpaqueFruits = false;
     public boolean catchColorByCombo = true;
-    public int mod = 1;
+    public int modEZHR = 1;
+    public int modHTDT = 1;
+    public int maniaConvertKeys = 0;
 
     public String lastChosenFolder = "%appdata%\\..\\Local\\osu!\\Songs";
 

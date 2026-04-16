@@ -5,8 +5,9 @@ import coutcincerrclog.osubeatmapviewer.drawer.ManiaDrawer;
 import coutcincerrclog.osubeatmapviewer.parser.Beatmap;
 import coutcincerrclog.osubeatmapviewer.parser.BeatmapParser;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObject;
-import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObjectModeConverter;
+import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObjectConverter;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.mania.ManiaConverter;
+import coutcincerrclog.osubeatmapviewer.parser.hitobjects.taiko.TaikoConverter;
 import coutcincerrclog.osubeatmapviewer.util.ClipboardUtil;
 
 import javax.swing.*;
@@ -31,8 +32,12 @@ public class MainWindow {
     private JTextField beatmapIDTextField;
     private JButton selectBIDButton;
     private JRadioButton modEZRadioButton;
-    private JRadioButton modNMRadioButton;
     private JRadioButton modHRRadioButton;
+    private JRadioButton modHTRadioButton;
+    private JRadioButton modDTRadioButton;
+    private JRadioButton modNMRadioButtonEZHR;
+    private JRadioButton modNMRadioButtonHTDT;
+    private JSpinner convertKeysSpinner;
 
     public Settings settings = new Settings();
     public Beatmap beatmap = null;
@@ -83,17 +88,37 @@ public class MainWindow {
             updateImage();
         });
 
-        modNMRadioButton.setSelected(true);
+        modNMRadioButtonEZHR.setSelected(true);
         modEZRadioButton.addActionListener(e -> {
-            settings.mod = Settings.MOD_EZ;
+            settings.modEZHR = Settings.MOD_EZ;
             updateImage();
         });
-        modNMRadioButton.addActionListener(e -> {
-            settings.mod = Settings.MOD_NM;
+        modNMRadioButtonEZHR.addActionListener(e -> {
+            settings.modEZHR = Settings.MOD_NM;
             updateImage();
         });
         modHRRadioButton.addActionListener(e -> {
-            settings.mod = Settings.MOD_HR;
+            settings.modEZHR = Settings.MOD_HR;
+            updateImage();
+        });
+
+        modNMRadioButtonHTDT.setSelected(true);
+        modHTRadioButton.addActionListener(e -> {
+            settings.modHTDT = Settings.MOD_HT;
+            updateImage();
+        });
+        modNMRadioButtonHTDT.addActionListener(e -> {
+            settings.modHTDT = Settings.MOD_NM;
+            updateImage();
+        });
+        modDTRadioButton.addActionListener(e -> {
+            settings.modHTDT = Settings.MOD_DT;
+            updateImage();
+        });
+
+        convertKeysSpinner.setModel(new SpinnerNumberModel(7, 1, 9, 1));
+        convertKeysSpinner.addChangeListener(e -> {
+            settings.maniaConvertKeys = (int) convertKeysSpinner.getModel().getValue();
             updateImage();
         });
     }
@@ -133,16 +158,17 @@ public class MainWindow {
             return;
 
         int showMode = beatmap.mode == 0 ? settings.convertMode : beatmap.mode;
-        HitObjectModeConverter converter;
+        HitObjectConverter converter;
         switch (showMode) {
             case 1:
-                throw new UnsupportedOperationException();
+                converter = new TaikoConverter(beatmap, settings);
+                break;
 
             case 2:
                 throw new UnsupportedOperationException();
 
             case 3:
-                converter = new ManiaConverter(beatmap);
+                converter = new ManiaConverter(beatmap, settings);
                 break;
 
             default:
@@ -157,6 +183,8 @@ public class MainWindow {
                     index = ~index;
                 beatmap.processedHitObjects.add(index, converted);
             }
+        beatmap.initIndex();
+        converter.postProcessing();
 
         Drawer drawer;
         switch (showMode) {

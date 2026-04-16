@@ -72,4 +72,29 @@ public class Beatmap {
         // and used it to scale mania scroll speed instead of the exact one
     }
 
+    public double beatLengthAt(double time, boolean allowMultiplier) {
+        if (timingPoints == null || timingPoints.isEmpty())
+            return 0;
+        int point = 0, samplePoint = 0;
+        for (int i = 0; i < timingPoints.size(); ++i) {
+            if (timingPoints.get(i).time <= time) {
+                if (timingPoints.get(i).uninherited)
+                    point = i;
+                else
+                    samplePoint = i;
+            }
+        }
+        if (allowMultiplier && samplePoint > point && timingPoints.get(samplePoint).beatLength < 0)
+            return timingPoints.get(point).beatLength * timingPoints.get(samplePoint).BPMMultiplier();
+        return timingPoints.get(point).beatLength;
+    }
+
+    public double beatLengthAt(double time) {
+        return beatLengthAt(time, true);
+    }
+
+    public void initIndex() {
+        for (int i = 0; i < processedHitObjects.size(); ++i)
+            processedHitObjects.get(i).index = i;
+    }
 }

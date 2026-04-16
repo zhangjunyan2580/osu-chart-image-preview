@@ -8,7 +8,7 @@ import coutcincerrclog.osubeatmapviewer.parser.hitobjects.generic.Spinner;
 import java.util.Collection;
 import java.util.Collections;
 
-public abstract class HitObjectModeConverter {
+public abstract class HitObjectConverter {
 
     public Collection<HitObject> convert(HitObject raw) {
         if (raw instanceof HitCircle)
@@ -26,5 +26,7 @@ public abstract class HitObjectModeConverter {
     public abstract Collection<HitObject> convertSlider(Slider raw);
     public abstract Collection<HitObject> convertSpinner(Spinner raw);
     public abstract Collection<HitObject> convertHold(Hold raw);
+
+    public abstract void postProcessing();
 
 }

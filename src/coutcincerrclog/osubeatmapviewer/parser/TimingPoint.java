@@ -42,4 +42,8 @@ public class TimingPoint {
         }
     }
 
+    public float BPMMultiplier() {
+        return Math.max(10, Math.min(10000, (float) -beatLength)) / 100f;
+    }
+
 }
