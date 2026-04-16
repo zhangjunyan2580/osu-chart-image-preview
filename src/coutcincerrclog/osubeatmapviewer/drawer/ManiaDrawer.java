@@ -227,6 +227,7 @@ public class ManiaDrawer extends Drawer {
                 if (nextTimingPointIndex != -1 && beatmap.timingPoints.get(nextTimingPointIndex).time <= currentTime + 1) {
                     currentTimingPoint = beatmap.timingPoints.get(nextTimingPointIndex);
                     nextTimingPointIndex = nextTimingPointIndices[nextTimingPointIndex];
+                    currentTime = currentTimingPoint.time;
                 }
             }
 
@@ -252,7 +253,7 @@ public class ManiaDrawer extends Drawer {
                 g.drawLine(x - TIMING_LEFT_LENGTH, y, x + columnCount * (COLUMN_SPACING + COLUMN_WIDTH) - 1, y);
 
                 boolean drawBPM = true;
-                for (int d = 1; d <= 6; ++d) {
+                for (int d = 1; d <= 7; ++d) {
                     if (toDrawnBPM.containsKey(new Vec2D(e.getKey().x, y - d))) {
                         drawBPM = false;
                         break;
@@ -272,7 +273,7 @@ public class ManiaDrawer extends Drawer {
                 int x = getSectionStartX(e.getKey().x, columnCount), y = e.getKey().y;
                 g.setColor(INHERITED_TIMING_COLOR);
                 int lengthRight = (int) Math.max(TIMING_RIGHT_MIN_LENGTH, Math.min(TIMING_RIGHT_MAX_LENGTH, Math.round(e.getValue() * TIMING_RIGHT_UNIT_LENGTH)));
-                g.drawLine(x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount + COLUMN_SPACING, y, x + (COLUMN_SPACING + COLUMN_WIDTH * columnCount) + COLUMN_SPACING + lengthRight - 1, y);
+                g.drawLine(x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount + COLUMN_SPACING, y, x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount + COLUMN_SPACING + lengthRight - 1, y);
 //                if (toDrawnBPM.containsKey(e.getKey())) {
 //                    g.setColor(MIXED_TIMING_COLOR);
 //                    g.drawLine(x + COLUMN_SPACING, y,x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount - 1, y);
