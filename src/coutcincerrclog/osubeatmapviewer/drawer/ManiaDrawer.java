@@ -7,11 +7,12 @@ import coutcincerrclog.osubeatmapviewer.parser.TimingPoint;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObject;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.mania.ManiaHitCircle;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.mania.ManiaHold;
+import sun.font.FontDesignMetrics;
 
 import java.awt.*;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
+import java.awt.font.LineMetrics;
+import java.awt.geom.Rectangle2D;
+import java.util.*;
 
 public class ManiaDrawer extends Drawer {
 
@@ -23,12 +24,17 @@ public class ManiaDrawer extends Drawer {
 
     public static final int COLUMN_WIDTH = 10;
     public static final int COLUMN_SPACING = 1;
-    public static final int SECTION_SPACING = 60;
+    public static final int SECTION_SPACING = 80;
 
     public static final int NOTE_HEIGHT = 5;
 
-    public static final int LEFT_PADDING = 10;
-    public static final int RIGHT_PADDING = 10;
+    public static final int LEFT_PADDING = 40;
+    public static final int RIGHT_PADDING = 50;
+
+    public static final int TIMING_LEFT_LENGTH = 20;
+    public static final int TIMING_RIGHT_MIN_LENGTH = 3;
+    public static final int TIMING_RIGHT_MAX_LENGTH = 50;
+    public static final int TIMING_RIGHT_UNIT_LENGTH = 15;
 
     public static final int MILLISECONDS_TO_PIXEL_DIV = 5;
     public static final int SECTION_TIME_SPAN = (SECTION_BOTTOM_Y - SECTION_TOP_Y) * MILLISECONDS_TO_PIXEL_DIV;
@@ -112,6 +118,12 @@ public class ManiaDrawer extends Drawer {
             { WL, BL, WL, BL, YL, BL, WL, BL, WL, WL, BL, WL, BL, YL, BL, WL, BL, WL }
     };
 
+    public static final Color INHERITED_TIMING_COLOR = new Color(0x87DA28);
+    public static final Color UNINHERITED_TIMING_COLOR = new Color(0xE13030);
+    public static final Color MIXED_TIMING_COLOR = new Color(0xEFC650);
+
+    public static final Font NUMBER_FONT = new Font("Consolas", Font.PLAIN, 8);
+
     @Override
     public Dimension getPreferredSize(Beatmap beatmap, Settings settings) {
         if (beatmap.processedHitObjects.isEmpty())
@@ -190,9 +202,11 @@ public class ManiaDrawer extends Drawer {
         for (int sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex) {
             for (int i = 0; i <= columnCount; ++i) {
                 int x = getColumnStartX(sectionIndex, i, columnCount);
-                g.drawLine(x, LANE_TOP_Y, x, LANE_BOTTOM_Y);
+                g.fillRect(x - COLUMN_SPACING, LANE_TOP_Y, COLUMN_SPACING, LANE_BOTTOM_Y - LANE_TOP_Y + 1);
             }
         }
+
+        int BPM = beatmap.getPrimaryBPM();
 
         if (firstTimingPointIndex != -1) {
             g.setColor(BAR_LINE_COLOR);
@@ -200,11 +214,12 @@ public class ManiaDrawer extends Drawer {
             double currentTime = startTime;
             int nextTimingPointIndex = nextTimingPointIndices[firstTimingPointIndex];
             TimingPoint currentTimingPoint = beatmap.timingPoints.get(firstTimingPointIndex);
+
             while (true) {
                 for (Vec2D coord : getDrawCoordinates(startTime, currentTime)) {
                     int sectionIndex = coord.x, y = coord.y;
                     int x = getSectionStartX(sectionIndex, columnCount);
-                    g.drawLine(x + COLUMN_SPACING, y, x + (COLUMN_WIDTH + COLUMN_SPACING) * columnCount - COLUMN_SPACING, y);
+                    g.drawLine(x + COLUMN_SPACING, y, x + (COLUMN_WIDTH + COLUMN_SPACING) * columnCount - 1, y);
                 }
                 if (currentTime >= endTime)
                     break;
@@ -214,11 +229,61 @@ public class ManiaDrawer extends Drawer {
                     nextTimingPointIndex = nextTimingPointIndices[nextTimingPointIndex];
                 }
             }
+
+            Map<Vec2D, Double> toDrawnBPM = new TreeMap<>();
+            Map<Vec2D, Double> toDrawnSpeed = new TreeMap<>();
+            double currentBeatLength = 60000. / BPM;
+            for (TimingPoint timingPoint : beatmap.timingPoints) {
+                if (timingPoint.uninherited) {
+                    for (Vec2D coord : getDrawCoordinates(startTime, timingPoint.time))
+                        toDrawnBPM.put(coord, 60000 / timingPoint.beatLength);
+                    currentBeatLength = timingPoint.beatLength;
+                } else {
+                    for (Vec2D coord : getDrawCoordinates(startTime, timingPoint.time))
+                        toDrawnSpeed.put(coord, (100 / Math.max(10, Math.min(10000, -timingPoint.beatLength))) * (60000 / currentBeatLength) / BPM);
+                }
+            }
+
+            g.setFont(NUMBER_FONT);
+            FontMetrics numberMetrics = g.getFontMetrics();
+            g.setColor(UNINHERITED_TIMING_COLOR);
+            for (Map.Entry<Vec2D, Double> e : toDrawnBPM.entrySet()) {
+                int x = getSectionStartX(e.getKey().x, columnCount), y = e.getKey().y;
+                g.drawLine(x - TIMING_LEFT_LENGTH, y, x + columnCount * (COLUMN_SPACING + COLUMN_WIDTH) - 1, y);
+
+                boolean drawBPM = true;
+                for (int d = 1; d <= 6; ++d) {
+                    if (toDrawnBPM.containsKey(new Vec2D(e.getKey().x, y - d))) {
+                        drawBPM = false;
+                        break;
+                    }
+                }
+                if (drawBPM) {
+                    double curBPM = e.getValue();
+                    String BPMString = curBPM >= 10000 ? "inf" :
+                            curBPM < 0.1 ? "0" :
+                                    String.format("%.5g", e.getValue());
+
+                    Rectangle2D bounds = numberMetrics.getStringBounds(BPMString, g);
+                    g.drawString(BPMString, (int) (x - bounds.getWidth()) - 1, y - 1);
+                }
+            }
+            for (Map.Entry<Vec2D, Double> e : toDrawnSpeed.entrySet()) {
+                int x = getSectionStartX(e.getKey().x, columnCount), y = e.getKey().y;
+                g.setColor(INHERITED_TIMING_COLOR);
+                int lengthRight = (int) Math.max(TIMING_RIGHT_MIN_LENGTH, Math.min(TIMING_RIGHT_MAX_LENGTH, Math.round(e.getValue() * TIMING_RIGHT_UNIT_LENGTH)));
+                g.drawLine(x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount + COLUMN_SPACING, y, x + (COLUMN_SPACING + COLUMN_WIDTH * columnCount) + COLUMN_SPACING + lengthRight - 1, y);
+//                if (toDrawnBPM.containsKey(e.getKey())) {
+//                    g.setColor(MIXED_TIMING_COLOR);
+//                    g.drawLine(x + COLUMN_SPACING, y,x + (COLUMN_SPACING + COLUMN_WIDTH) * columnCount - 1, y);
+//                }
+            }
         }
 
         {
             int nextTimingPointIndex = firstTimingPointIndex == -1 ? -1 : nextTimingPointIndices[firstTimingPointIndex];
             TimingPoint currentTimingPoint = firstTimingPointIndex == -1 ? null : beatmap.timingPoints.get(firstTimingPointIndex);
+
             for (HitObject hitObject : beatmap.processedHitObjects) {
                 if (!(hitObject instanceof ManiaHitCircle) && ! (hitObject instanceof ManiaHold))
                     continue;
@@ -247,28 +312,28 @@ public class ManiaDrawer extends Drawer {
                     if (hitObject.time <= ((ManiaHold) hitObject).endTime) {
                         if (coordStart.x == coordEnd.x) {
                             g.setColor(edgeColor);
-                            g.drawRect(x + 1, coordEnd.y + 1, COLUMN_WIDTH - 1, coordStart.y - coordEnd.y - 2);
+                            g.drawRect(x, coordEnd.y + 1, COLUMN_WIDTH - 1, coordStart.y - coordEnd.y - 2);
                             g.setColor(interiorColor);
-                            g.fillRect(x + 2, coordEnd.y + 2, COLUMN_WIDTH - 2, coordStart.y - coordEnd.y - 1 - NOTE_HEIGHT);
+                            g.fillRect(x + 1, coordEnd.y + 2, COLUMN_WIDTH - 2, coordStart.y - coordEnd.y - 1 - NOTE_HEIGHT);
                         } else {
                             g.setColor(edgeColor);
-                            g.drawLine(x + 1, LANE_TOP_Y, x + 1, coordStart.y - NOTE_HEIGHT);
-                            g.drawLine(x + COLUMN_WIDTH, LANE_TOP_Y, x + COLUMN_WIDTH, coordStart.y - NOTE_HEIGHT);
+                            g.drawLine(x, LANE_TOP_Y, x, coordStart.y - NOTE_HEIGHT);
+                            g.drawLine(x + COLUMN_WIDTH - 1, LANE_TOP_Y, x + COLUMN_WIDTH - 1, coordStart.y - NOTE_HEIGHT);
                             x = getColumnStartX(coordEnd.x, column, columnCount);
-                            g.drawLine(x + 1, coordEnd.y + 1, x + 1, LANE_BOTTOM_Y);
-                            g.drawLine(x + COLUMN_WIDTH, coordEnd.y + 1, x + COLUMN_WIDTH, LANE_BOTTOM_Y);
-                            g.drawLine(x + 1, coordEnd.y + 1, x + COLUMN_WIDTH, coordEnd.y + 1);
+                            g.drawLine(x, coordEnd.y + 1, x, LANE_BOTTOM_Y);
+                            g.drawLine(x + COLUMN_WIDTH - 1, coordEnd.y + 1, x + COLUMN_WIDTH - 1, LANE_BOTTOM_Y);
+                            g.drawLine(x, coordEnd.y + 1, x + COLUMN_WIDTH - 1, coordEnd.y + 1);
                             for (int i = coordStart.x + 1; i < coordEnd.x; ++i) {
                                 x = getColumnStartX(i, column, columnCount);
-                                g.drawLine(x + 1, LANE_TOP_Y, x + 1, LANE_BOTTOM_Y);
-                                g.drawLine(x + COLUMN_WIDTH, LANE_TOP_Y, x + COLUMN_WIDTH, LANE_BOTTOM_Y);
+                                g.drawLine(x, LANE_TOP_Y, x, LANE_BOTTOM_Y);
+                                g.drawLine(x + COLUMN_WIDTH - 1, LANE_TOP_Y, x + COLUMN_WIDTH - 1, LANE_BOTTOM_Y);
                             }
 
                             x = getColumnStartX(coordStart.x, column, columnCount);
                             g.setColor(interiorColor);
-                            g.fillRect(x + 2, LANE_TOP_Y, COLUMN_WIDTH - 2, coordStart.y - LANE_TOP_Y - NOTE_HEIGHT + 1);
+                            g.fillRect(x + 1, LANE_TOP_Y, COLUMN_WIDTH - 2, coordStart.y - LANE_TOP_Y - NOTE_HEIGHT + 1);
                             x = getColumnStartX(coordEnd.x, column, columnCount);
-                            g.fillRect(x + 2, coordEnd.y + 2, COLUMN_WIDTH - 2, LANE_BOTTOM_Y - coordEnd.y - 1);
+                            g.fillRect(x + 1, coordEnd.y + 2, COLUMN_WIDTH - 2, LANE_BOTTOM_Y - coordEnd.y - 1);
                             for (int i = coordStart.x + 1; i < coordEnd.x; ++i) {
                                 x = getColumnStartX(i, column, columnCount);
                                 g.fillRect(x + 1, LANE_TOP_Y, COLUMN_WIDTH - 2, LANE_BOTTOM_Y - LANE_TOP_Y + 1);
@@ -285,7 +350,7 @@ public class ManiaDrawer extends Drawer {
     }
 
     public static int getColumnStartX(int sectionIndex, int column, int columns) {
-        return LEFT_PADDING + sectionIndex * (SECTION_SPACING + COLUMN_SPACING + (COLUMN_WIDTH + COLUMN_SPACING) * columns) + column * (COLUMN_WIDTH + COLUMN_SPACING);
+        return LEFT_PADDING + sectionIndex * (SECTION_SPACING + COLUMN_SPACING + (COLUMN_WIDTH + COLUMN_SPACING) * columns) + column * (COLUMN_WIDTH + COLUMN_SPACING) + COLUMN_SPACING;
     }
 
     public static Collection<Vec2D> getDrawCoordinates(int startTime, double time) {
@@ -320,9 +385,9 @@ public class ManiaDrawer extends Drawer {
 
     public static void drawNote(Graphics2D g, int x, int y, Color interior, Color edge) {
         g.setColor(interior);
-        g.fillRect(x + 2, y - NOTE_HEIGHT + 2, COLUMN_WIDTH - 2, NOTE_HEIGHT - 2);
+        g.fillRect(x + 1, y - NOTE_HEIGHT + 2, COLUMN_WIDTH - 2, NOTE_HEIGHT - 2);
         g.setColor(edge);
-        g.drawRect(x + 1, y - NOTE_HEIGHT + 1, COLUMN_WIDTH - 1, NOTE_HEIGHT - 1);
+        g.drawRect(x, y - NOTE_HEIGHT + 1, COLUMN_WIDTH - 1, NOTE_HEIGHT - 1);
     }
 
 }

@@ -30,8 +30,12 @@ public class MainWindow {
     private JCheckBox catchColorFruitComboCheckBox;
     private JTextField beatmapIDTextField;
     private JButton selectBIDButton;
+    private JRadioButton modEZRadioButton;
+    private JRadioButton modNMRadioButton;
+    private JRadioButton modHRRadioButton;
 
     public Settings settings = new Settings();
+    public Beatmap beatmap = null;
 
     public MainWindow() {
         selectLocalBeatmapFileButton.addActionListener(e -> {
@@ -44,70 +48,54 @@ public class MainWindow {
                 return;
             settings.lastChosenFolder = dialog.getDirectory();
             File chosenFile = new File(settings.lastChosenFolder + "\\" + dialog.getFile());
-            Beatmap beatmap = BeatmapParser.parse(chosenFile);
-
-            int showMode = beatmap.mode == 0 ? settings.convertMode : beatmap.mode;
-            HitObjectModeConverter converter;
-            switch (showMode) {
-                case 1:
-                    throw new UnsupportedOperationException();
-
-                case 2:
-                    throw new UnsupportedOperationException();
-
-                case 3:
-                    converter = new ManiaConverter(beatmap);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException();
-            }
-
-            for (HitObject hitObject : beatmap.rawHitObjects)
-                for (HitObject converted : converter.convert(hitObject)) {
-                    int index = Collections.binarySearch(beatmap.processedHitObjects, converted, Comparator.comparingInt(h -> h.time));
-                    if (index < 0)
-                        index = ~index;
-                    beatmap.processedHitObjects.add(index, converted);
-                }
-
-            Drawer drawer;
-            switch (showMode) {
-                case 1:
-                    throw new UnsupportedOperationException();
-
-                case 2:
-                    throw new UnsupportedOperationException();
-
-                case 3:
-                    drawer = new ManiaDrawer();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException();
-            }
-
-            Dimension dimensions = drawer.getPreferredSize(beatmap, settings);
-            BufferedImage image = new BufferedImage(dimensions.width, dimensions.height, BufferedImage.TYPE_INT_ARGB);
-            imageLabel.setSize(dimensions);
-            Thread thread = new Thread(() -> {
-                Graphics2D g = image.createGraphics();
-                drawer.draw(g, beatmap, settings);
-                g.dispose();
-
-                ClipboardUtil.copyImage(image);
-                SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(image)));
-            }, "Drawing");
-            thread.start();
+            beatmap = BeatmapParser.parse(chosenFile);
+            updateImage();
         });
 
-        convertTaikoRadioButton.addActionListener(e -> settings.convertMode = 1);
-        convertCatchRadioButton.addActionListener(e -> settings.convertMode = 2);
-        convertManiaRadioButton.addActionListener(e -> settings.convertMode = 3);
-        maniaColorNoteSnapRadioButton.addActionListener(e -> settings.maniaColorBySnap = true);
-        maniaColorNoteColumnRadioButton.addActionListener(e -> settings.maniaColorBySnap = false);
-        catchOpaqueFruitsCheckBox.addActionListener(e -> settings.catchOpaqueFruits = catchOpaqueFruitsCheckBox.isSelected());
-        catchColorFruitComboCheckBox.addActionListener(e -> settings.catchColorByCombo = catchColorFruitComboCheckBox.isSelected());
+        convertTaikoRadioButton.addActionListener(e -> {
+            settings.convertMode = 1;
+            updateImage();
+        });
+        convertCatchRadioButton.addActionListener(e -> {
+            settings.convertMode = 2;
+            updateImage();
+        });
+        convertManiaRadioButton.addActionListener(e -> {
+            settings.convertMode = 3;
+            updateImage();
+        });
+
+        maniaColorNoteSnapRadioButton.addActionListener(e -> {
+            settings.maniaColorBySnap = true;
+            updateImage();
+        });
+        maniaColorNoteColumnRadioButton.addActionListener(e -> {
+            settings.maniaColorBySnap = false;
+            updateImage();
+        });
+
+        catchOpaqueFruitsCheckBox.addActionListener(e -> {
+            settings.catchOpaqueFruits = catchOpaqueFruitsCheckBox.isSelected();
+            updateImage();
+        });
+        catchColorFruitComboCheckBox.addActionListener(e -> {
+            settings.catchColorByCombo = catchColorFruitComboCheckBox.isSelected();
+            updateImage();
+        });
+
+        modNMRadioButton.setSelected(true);
+        modEZRadioButton.addActionListener(e -> {
+            settings.mod = Settings.MOD_EZ;
+            updateImage();
+        });
+        modNMRadioButton.addActionListener(e -> {
+            settings.mod = Settings.MOD_NM;
+            updateImage();
+        });
+        modHRRadioButton.addActionListener(e -> {
+            settings.mod = Settings.MOD_HR;
+            updateImage();
+        });
     }
 
     public void initSettings() {
@@ -138,6 +126,66 @@ public class MainWindow {
     public void saveSettings() {
         File configFile = new File(".\\config.txt");
         settings.writeToFile(configFile);
+    }
+
+    public void updateImage() {
+        if (beatmap == null)
+            return;
+
+        int showMode = beatmap.mode == 0 ? settings.convertMode : beatmap.mode;
+        HitObjectModeConverter converter;
+        switch (showMode) {
+            case 1:
+                throw new UnsupportedOperationException();
+
+            case 2:
+                throw new UnsupportedOperationException();
+
+            case 3:
+                converter = new ManiaConverter(beatmap);
+                break;
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+
+        beatmap.processedHitObjects.clear();
+        for (HitObject hitObject : beatmap.rawHitObjects)
+            for (HitObject converted : converter.convert(hitObject)) {
+                int index = Collections.binarySearch(beatmap.processedHitObjects, converted, Comparator.comparingInt(h -> h.time));
+                if (index < 0)
+                    index = ~index;
+                beatmap.processedHitObjects.add(index, converted);
+            }
+
+        Drawer drawer;
+        switch (showMode) {
+            case 1:
+                throw new UnsupportedOperationException();
+
+            case 2:
+                throw new UnsupportedOperationException();
+
+            case 3:
+                drawer = new ManiaDrawer();
+                break;
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+
+        Dimension dimensions = drawer.getPreferredSize(beatmap, settings);
+        BufferedImage image = new BufferedImage(dimensions.width, dimensions.height, BufferedImage.TYPE_INT_ARGB);
+        imageLabel.setSize(dimensions);
+        Thread thread = new Thread(() -> {
+            Graphics2D g = image.createGraphics();
+            drawer.draw(g, beatmap, settings);
+            g.dispose();
+
+            ClipboardUtil.copyImage(image);
+            SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(image)));
+        }, "Drawing");
+        thread.start();
     }
 
 }

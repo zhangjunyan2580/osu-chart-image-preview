@@ -4,14 +4,20 @@ import java.io.*;
 
 public class Settings {
 
+    public static int MOD_EZ = 0;
+    public static int MOD_NM = 1;
+    public static int MOD_HR = 2;
+
     public int convertMode = 2;
     public boolean maniaColorBySnap = true;
     public boolean catchOpaqueFruits = false;
     public boolean catchColorByCombo = true;
+    public int mod = 1;
 
     public String lastChosenFolder = "%appdata%\\..\\Local\\osu!\\Songs";
 
     public void readFromFile(File file) {
+        // Mod data is intentionally not persisted
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
             while (true) {
