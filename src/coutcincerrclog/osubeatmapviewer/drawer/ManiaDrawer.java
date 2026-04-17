@@ -7,10 +7,8 @@ import coutcincerrclog.osubeatmapviewer.parser.TimingPoint;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObject;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.mania.ManiaHitCircle;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.mania.ManiaHold;
-import sun.font.FontDesignMetrics;
 
 import java.awt.*;
-import java.awt.font.LineMetrics;
 import java.awt.geom.Rectangle2D;
 import java.util.*;
 
