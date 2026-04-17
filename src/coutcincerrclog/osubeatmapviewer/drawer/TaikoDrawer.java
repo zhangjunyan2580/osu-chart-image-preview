@@ -26,8 +26,13 @@ public class TaikoDrawer extends Drawer {
     public static final int ROW_START = 100;
     public static final int ROW_BOUNDARY_HEIGHT = 1;
     public static final int ROW_HEIGHT = 33;
-    public static final int ROW_SPACING = 40;
+    public static final int ROW_SPACING = 70;
     public static final int BOTTOM_PADDING = 20;
+
+    public static final int UNINHERITED_LENGTH = 60;
+    public static final int INHERITED_MAX_LENGTH = 50;
+    public static final int INHERITED_UNIT_LENGTH = 15;
+    public static final int INHERITED_MIN_LENGTH = 3;
 
     public static final int FINISHER_RADIUS = 15;
     public static final int FINISHER_INTERIOR_RADIUS = 12;
@@ -50,6 +55,9 @@ public class TaikoDrawer extends Drawer {
     public static final Color KAT_COLOR = new Color(0x448FAE);
     public static final Color DRUMROLL_COLOR = new Color(0xFBB909);
     public static final Color SPINNER_COLOR = Color.BLACK;
+
+    public static final Color INHERITED_TIMING_COLOR = new Color(0x87DA28);
+    public static final Color UNINHERITED_TIMING_COLOR = new Color(0xE13030);
 
     @Override
     public Dimension getPreferredSize(Beatmap beatmap, Settings settings) {
@@ -137,6 +145,30 @@ public class TaikoDrawer extends Drawer {
             g.fillRect(LEFT_PADDING, y + 1, WIDTH - RIGHT_PADDING - LEFT_PADDING + 1, ROW_HEIGHT);
         }
 
+        if (!beatmap.timingPoints.isEmpty()){
+            for (int i = 0; i < uninheritedPoints.size(); ++i) {
+                TimingPoint currentTimingPoint = uninheritedPoints.get(i);
+                double sectionEnd = i == uninheritedPoints.size() - 1 ? endTime : uninheritedPoints.get(i + 1).time;
+                int beatStep = currentTimingPoint.beatLength >= 5 ? 1 :
+                        currentTimingPoint.beatLength * currentTimingPoint.meter >= 5 ? currentTimingPoint.meter :
+                        ((int) Math.ceil(5 / (currentTimingPoint.beatLength / currentTimingPoint.meter))) * currentTimingPoint.meter;
+                for (int beat = 0; ; beat += beatStep) {
+                    double time = currentTimingPoint.time + beat * currentTimingPoint.beatLength;
+                    if (time >= sectionEnd)
+                        break;
+                    Vec2D coord = getBeatCoordinates((i == 0 ? 0 : cumulativeBeats[i]) + beat);
+                    int y = getRowStartY(coord.y);
+                    if (beat % currentTimingPoint.meter == 0) {
+                        g.setColor(MEASURE_LINE_COLOR);
+                        g.fillRect(coord.x - 1, y, 3, ROW_HEIGHT + 2 * ROW_BOUNDARY_HEIGHT);
+                    } else {
+                        g.setColor(BEAT_LINE_COLOR);
+                        g.drawLine(coord.x, y + ROW_BOUNDARY_HEIGHT, coord.x, y + ROW_BOUNDARY_HEIGHT + ROW_HEIGHT - 1);
+                    }
+                }
+            }
+        }
+
         {
             List<Integer> times = new ArrayList<>();
             for (HitObject hitObject : beatmap.processedHitObjects) {
@@ -204,7 +236,7 @@ public class TaikoDrawer extends Drawer {
         double rowPos = beat / BEATS_PER_ROW;
         int row = (int) Math.floor(rowPos);
         int x = (int) Math.round((rowPos - row) * (WIDTH - LEFT_PADDING - RIGHT_PADDING) + LEFT_PADDING);
-        if (x >= WIDTH - RIGHT_PADDING) {
+        if (x >= WIDTH - RIGHT_PADDING - 1) {
             x = LEFT_PADDING;
             row += 1;
         }
