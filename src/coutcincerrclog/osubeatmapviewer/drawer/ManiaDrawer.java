@@ -120,7 +120,6 @@ public class ManiaDrawer extends Drawer {
 
     public static final Color INHERITED_TIMING_COLOR = new Color(0x87DA28);
     public static final Color UNINHERITED_TIMING_COLOR = new Color(0xE13030);
-    public static final Color MIXED_TIMING_COLOR = new Color(0xEFC650);
 
     public static final Font NUMBER_FONT = new Font("Consolas", Font.PLAIN, 8);
 
@@ -155,7 +154,7 @@ public class ManiaDrawer extends Drawer {
     }
 
     @Override
-    public void draw(Graphics2D g, Beatmap beatmap, Settings settings) {
+    public void draw(Graphics2D g, Dimension dimension, Beatmap beatmap, Settings settings) {
         if (beatmap.processedHitObjects.isEmpty())
             return;
 
@@ -192,11 +191,8 @@ public class ManiaDrawer extends Drawer {
         int sectionCount = (endTime - startTime) / SECTION_TIME_SPAN + 1;
         int columnCount = Math.round(beatmap.circleSize);
 
-        {
-            int totalWidth = LEFT_PADDING + (columnCount * (COLUMN_SPACING + COLUMN_WIDTH) + COLUMN_SPACING + SECTION_SPACING) * sectionCount - SECTION_SPACING + RIGHT_PADDING;
-            g.setColor(BACKGROUND_COLOR);
-            g.fillRect(0, 0, totalWidth, LANE_BOTTOM_Y + 1);
-        }
+        g.setColor(BACKGROUND_COLOR);
+        g.fillRect(0, 0, dimension.width, dimension.height);
 
         g.setColor(COLUMN_LINE_COLOR);
         for (int sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex) {

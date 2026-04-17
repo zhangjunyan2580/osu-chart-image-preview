@@ -2,6 +2,7 @@ package coutcincerrclog.osubeatmapviewer;
 
 import coutcincerrclog.osubeatmapviewer.drawer.Drawer;
 import coutcincerrclog.osubeatmapviewer.drawer.ManiaDrawer;
+import coutcincerrclog.osubeatmapviewer.drawer.TaikoDrawer;
 import coutcincerrclog.osubeatmapviewer.parser.Beatmap;
 import coutcincerrclog.osubeatmapviewer.parser.BeatmapParser;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObject;
@@ -189,7 +190,8 @@ public class MainWindow {
         Drawer drawer;
         switch (showMode) {
             case 1:
-                throw new UnsupportedOperationException();
+                drawer = new TaikoDrawer();
+                break;
 
             case 2:
                 throw new UnsupportedOperationException();
@@ -207,7 +209,7 @@ public class MainWindow {
         imageLabel.setSize(dimensions);
         Thread thread = new Thread(() -> {
             Graphics2D g = image.createGraphics();
-            drawer.draw(g, beatmap, settings);
+            drawer.draw(g, dimensions, beatmap, settings);
             g.dispose();
 
             ClipboardUtil.copyImage(image);

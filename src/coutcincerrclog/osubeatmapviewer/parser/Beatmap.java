@@ -63,11 +63,9 @@ public class Beatmap {
             beatLengthDuration.merge(currentBeatLength, duration, Integer::sum);
             lastTime = timingPoint.time;
         }
-        return (int) Math.round(
-                60000 / beatLengthDuration.entrySet().stream()
-                        .max(Comparator.comparingInt(Map.Entry::getValue))
-                        .map(Map.Entry::getKey).orElse(0.)
-        );
+        return beatLengthDuration.entrySet().stream()
+                .max(Comparator.comparingInt(Map.Entry::getValue))
+                .map(Map.Entry::getKey).map(e -> (int) Math.round(60000 / e)).orElse(0);
         // Yes they returned the *rounded* integer BPM
         // and used it to scale mania scroll speed instead of the exact one
     }
