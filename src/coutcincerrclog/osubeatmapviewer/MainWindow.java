@@ -26,11 +26,9 @@ public class MainWindow {
     private JRadioButton convertManiaRadioButton;
     private JCheckBox catchOpaqueFruitsCheckBox;
     private JButton selectLocalBeatmapFileButton;
-    private JScrollPane imagePanel;
     public JPanel contentPanel;
     private JLabel imageLabel;
     private JCheckBox catchColorFruitComboCheckBox;
-    private JTextField beatmapIDTextField;
     private JButton selectBIDButton;
     private JRadioButton modEZRadioButton;
     private JRadioButton modHRRadioButton;
@@ -39,9 +37,13 @@ public class MainWindow {
     private JRadioButton modNMRadioButtonEZHR;
     private JRadioButton modNMRadioButtonHTDT;
     private JSpinner convertKeysSpinner;
+    private JButton clearCacheButton;
+    private JSpinner BIDSpinner;
 
     public Settings settings = new Settings();
     public Beatmap beatmap = null;
+
+    public static final String BEATMAP_CACHE_DIR = "." + File.separator + "cache" + File.separator;
 
     public MainWindow() {
         selectLocalBeatmapFileButton.addActionListener(e -> {
@@ -54,8 +56,18 @@ public class MainWindow {
                 return;
             settings.lastChosenFolder = dialog.getDirectory();
             File chosenFile = new File(settings.lastChosenFolder + "\\" + dialog.getFile());
-            beatmap = BeatmapParser.parse(chosenFile);
-            updateImage();
+
+            new Thread(() -> {
+                try {
+                    beatmap = BeatmapParser.parse(chosenFile);
+                    updateImage();
+                } catch (RuntimeException ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        imageLabel.setIcon(null);
+                        imageLabel.setText(ex.getMessage());
+                    });
+                }
+            }, "Processing").start();
         });
 
         convertTaikoRadioButton.addActionListener(e -> {
@@ -122,6 +134,8 @@ public class MainWindow {
             settings.maniaConvertKeys = (int) convertKeysSpinner.getModel().getValue();
             updateImage();
         });
+
+        BIDSpinner.setModel(new SpinnerNumberModel(1, 1, Integer.MAX_VALUE, 1));
     }
 
     public void initSettings() {
@@ -150,7 +164,7 @@ public class MainWindow {
     }
 
     public void saveSettings() {
-        File configFile = new File(".\\config.txt");
+        File configFile = new File("." + File.separator + "config.txt");
         settings.writeToFile(configFile);
     }
 
@@ -208,12 +222,22 @@ public class MainWindow {
         BufferedImage image = new BufferedImage(dimensions.width, dimensions.height, BufferedImage.TYPE_INT_ARGB);
         imageLabel.setSize(dimensions);
         Thread thread = new Thread(() -> {
-            Graphics2D g = image.createGraphics();
-            drawer.draw(g, dimensions, beatmap, settings);
-            g.dispose();
+            try {
+                Graphics2D g = image.createGraphics();
+                drawer.draw(g, dimensions, beatmap, settings);
+                g.dispose();
 
-            ClipboardUtil.copyImage(image);
-            SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(image)));
+                ClipboardUtil.copyImage(image);
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    imageLabel.setIcon(null);
+                    imageLabel.setText(e.getMessage());
+                });
+            }
+            SwingUtilities.invokeLater(() -> {
+                imageLabel.setText(null);
+                imageLabel.setIcon(new ImageIcon(image));
+            });
         }, "Drawing");
         thread.start();
     }
