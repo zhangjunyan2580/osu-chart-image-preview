@@ -3,6 +3,7 @@ package coutcincerrclog.osubeatmapviewer;
 import coutcincerrclog.osubeatmapviewer.drawer.Drawer;
 import coutcincerrclog.osubeatmapviewer.drawer.ManiaDrawer;
 import coutcincerrclog.osubeatmapviewer.drawer.TaikoDrawer;
+import coutcincerrclog.osubeatmapviewer.network.BeatmapDownload;
 import coutcincerrclog.osubeatmapviewer.parser.Beatmap;
 import coutcincerrclog.osubeatmapviewer.parser.BeatmapParser;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.HitObject;
@@ -43,7 +44,7 @@ public class MainWindow {
     public Settings settings = new Settings();
     public Beatmap beatmap = null;
 
-    public static final String BEATMAP_CACHE_DIR = "." + File.separator + "cache" + File.separator;
+    public static final File BEATMAP_CACHE_DIR = new File("." + File.separator + "cache" + File.separator);
 
     public MainWindow() {
         selectLocalBeatmapFileButton.addActionListener(e -> {
@@ -62,12 +63,37 @@ public class MainWindow {
                     beatmap = BeatmapParser.parse(chosenFile);
                     updateImage();
                 } catch (RuntimeException ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        imageLabel.setIcon(null);
-                        imageLabel.setText(ex.getMessage());
-                    });
+                    setImageLabelContent(ex.getMessage());
                 }
             }, "Processing").start();
+        });
+
+        selectBIDButton.addActionListener(e -> {
+            if (!BEATMAP_CACHE_DIR.exists()) {
+                if (!BEATMAP_CACHE_DIR.mkdirs()) {
+                    setImageLabelContent("Error downloading beatmap: failed to make cache directory");
+                    return;
+                }
+            }
+
+            int bid = (int) BIDSpinner.getModel().getValue();
+            File beatmapFile = new File(BEATMAP_CACHE_DIR, bid + ".osu");
+            new Thread(() -> {
+                try {
+                    if (!beatmapFile.exists())
+                        BeatmapDownload.downloadBeatmap(bid, beatmapFile);
+                    new Thread(() -> {
+                        try {
+                            beatmap = BeatmapParser.parse(beatmapFile);
+                            updateImage();
+                        } catch (RuntimeException ex) {
+                            setImageLabelContent(ex.getMessage());
+                        }
+                    }, "Processing").start();
+                } catch (RuntimeException ex) {
+                    setImageLabelContent(ex.getMessage());
+                }
+            }, "Downloading").start();
         });
 
         convertTaikoRadioButton.addActionListener(e -> {
@@ -136,6 +162,7 @@ public class MainWindow {
         });
 
         BIDSpinner.setModel(new SpinnerNumberModel(1, 1, Integer.MAX_VALUE, 1));
+        BIDSpinner.setEditor(new JSpinner.NumberEditor(BIDSpinner, "#"));
     }
 
     public void initSettings() {
@@ -229,17 +256,25 @@ public class MainWindow {
 
                 ClipboardUtil.copyImage(image);
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() -> {
-                    imageLabel.setIcon(null);
-                    imageLabel.setText(e.getMessage());
-                });
+                setImageLabelContent(e.getMessage());
             }
-            SwingUtilities.invokeLater(() -> {
-                imageLabel.setText(null);
-                imageLabel.setIcon(new ImageIcon(image));
-            });
+            setImageLabelContent(new ImageIcon(image));
         }, "Drawing");
         thread.start();
+    }
+
+    private void setImageLabelContent(String text) {
+        SwingUtilities.invokeLater(() -> {
+            imageLabel.setIcon(null);
+            imageLabel.setText(text);
+        });
+    }
+
+    private void setImageLabelContent(Icon icon) {
+        SwingUtilities.invokeLater(() -> {
+            imageLabel.setText(null);
+            imageLabel.setIcon(icon);
+        });
     }
 
 }

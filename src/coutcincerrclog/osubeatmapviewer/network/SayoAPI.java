@@ -6,6 +6,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
 
+@SuppressWarnings("unused")
 public class SayoAPI {
 
     public static int getSetIDByBeatmapID(int beatmapID) {
@@ -43,13 +44,8 @@ public class SayoAPI {
                 throw new RuntimeException("Error requesting " + urlString + ": Response code " + responseCode);
             }
         } catch (IOException e) {
-            // This should not happen
             throw new RuntimeException(e);
         }
-    }
-
-    public static void downloadBeatmap(int setID) {
-
     }
 
 }
