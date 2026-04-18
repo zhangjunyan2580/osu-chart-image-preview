@@ -10,4 +10,4 @@ Features:
 - [ ] Preview catch converted beatmaps
 - [ ] Preview mania converted beatmaps
 - [x] Use local beatmap files (.osu)
-- [ ] Use online beatmaps (beatmap ID)
+- [x] Use online beatmaps (by beatmap ID)
