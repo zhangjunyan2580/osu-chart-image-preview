@@ -56,7 +56,7 @@ public class MainWindow {
             if (dialog.getDirectory() == null)
                 return;
             settings.lastChosenFolder = dialog.getDirectory();
-            File chosenFile = new File(settings.lastChosenFolder + "\\" + dialog.getFile());
+            File chosenFile = new File(settings.lastChosenFolder, dialog.getFile());
 
             new Thread(() -> {
                 try {
@@ -166,7 +166,7 @@ public class MainWindow {
     }
 
     public void initSettings() {
-        File configFile = new File(".\\config.txt");
+        File configFile = new File("." + File.separator + "config.txt");
         settings.readFromFile(configFile);
         switch (settings.convertMode) {
             case 1:
