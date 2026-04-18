@@ -96,6 +96,32 @@ public class MainWindow {
             }, "Downloading").start();
         });
 
+        clearCacheButton.addActionListener(e -> {
+            File[] files = BEATMAP_CACHE_DIR.listFiles();
+            int successCount = 0, failedCount = 0;
+            if (files != null) {
+                for (File file : files) {
+                    if (file.delete())
+                        ++successCount;
+                    else
+                        ++failedCount;
+                }
+            }
+            String msg;
+            if (successCount > 0) {
+                if (failedCount == 0)
+                    msg = "Successfully deleted " + successCount + " beatmaps";
+                else
+                    msg = "Successfully deleted " + successCount + " beatmaps, failed to delete " + failedCount + " beatmaps";
+            } else {
+                if (failedCount == 0)
+                    msg = "There are no beatmaps to delete";
+                else
+                    msg = "Failed to delete " + failedCount + " beatmaps";
+            }
+            JOptionPane.showMessageDialog(null, msg);
+        });
+
         convertTaikoRadioButton.addActionListener(e -> {
             settings.convertMode = 1;
             updateImage();
@@ -199,68 +225,72 @@ public class MainWindow {
         if (beatmap == null)
             return;
 
-        int showMode = beatmap.mode == 0 ? settings.convertMode : beatmap.mode;
-        HitObjectConverter converter;
-        switch (showMode) {
-            case 1:
-                converter = new TaikoConverter(beatmap, settings);
-                break;
+        try {
+            int showMode = beatmap.mode == 0 ? settings.convertMode : beatmap.mode;
+            HitObjectConverter converter;
+            switch (showMode) {
+                case 1:
+                    converter = new TaikoConverter(beatmap, settings);
+                    break;
 
-            case 2:
-                throw new UnsupportedOperationException();
+                case 2:
+                    throw new UnsupportedOperationException("osu!catch support is not yet implemented");
 
-            case 3:
-                converter = new ManiaConverter(beatmap, settings);
-                break;
+                case 3:
+                    converter = new ManiaConverter(beatmap, settings);
+                    break;
 
-            default:
-                throw new UnsupportedOperationException();
-        }
-
-        beatmap.processedHitObjects.clear();
-        for (HitObject hitObject : beatmap.rawHitObjects)
-            for (HitObject converted : converter.convert(hitObject)) {
-                int index = Collections.binarySearch(beatmap.processedHitObjects, converted, Comparator.comparingInt(h -> h.time));
-                if (index < 0)
-                    index = ~index;
-                beatmap.processedHitObjects.add(index, converted);
+                default:
+                    throw new UnsupportedOperationException();
             }
-        beatmap.initIndex();
-        converter.postProcessing();
 
-        Drawer drawer;
-        switch (showMode) {
-            case 1:
-                drawer = new TaikoDrawer();
-                break;
+            beatmap.processedHitObjects.clear();
+            for (HitObject hitObject : beatmap.rawHitObjects)
+                for (HitObject converted : converter.convert(hitObject)) {
+                    int index = Collections.binarySearch(beatmap.processedHitObjects, converted, Comparator.comparingInt(h -> h.time));
+                    if (index < 0)
+                        index = ~index;
+                    beatmap.processedHitObjects.add(index, converted);
+                }
+            beatmap.initIndex();
+            converter.postProcessing();
 
-            case 2:
-                throw new UnsupportedOperationException();
+            Drawer drawer;
+            switch (showMode) {
+                case 1:
+                    drawer = new TaikoDrawer();
+                    break;
 
-            case 3:
-                drawer = new ManiaDrawer();
-                break;
+                case 2:
+                    throw new UnsupportedOperationException("osu!catch support is not yet implemented");
 
-            default:
-                throw new UnsupportedOperationException();
-        }
+                case 3:
+                    drawer = new ManiaDrawer();
+                    break;
 
-        Dimension dimensions = drawer.getPreferredSize(beatmap, settings);
-        BufferedImage image = new BufferedImage(dimensions.width, dimensions.height, BufferedImage.TYPE_INT_ARGB);
-        imageLabel.setSize(dimensions);
-        Thread thread = new Thread(() -> {
-            try {
-                Graphics2D g = image.createGraphics();
-                drawer.draw(g, dimensions, beatmap, settings);
-                g.dispose();
-
-                ClipboardUtil.copyImage(image);
-            } catch (Exception e) {
-                setImageLabelContent(e.getMessage());
+                default:
+                    throw new UnsupportedOperationException();
             }
-            setImageLabelContent(new ImageIcon(image));
-        }, "Drawing");
-        thread.start();
+
+            Dimension dimensions = drawer.getPreferredSize(beatmap, settings);
+            BufferedImage image = new BufferedImage(dimensions.width, dimensions.height, BufferedImage.TYPE_INT_ARGB);
+            imageLabel.setSize(dimensions);
+            Thread thread = new Thread(() -> {
+                try {
+                    Graphics2D g = image.createGraphics();
+                    drawer.draw(g, dimensions, beatmap, settings);
+                    g.dispose();
+
+                    ClipboardUtil.copyImage(image);
+                } catch (Exception e) {
+                    setImageLabelContent(e.getMessage());
+                }
+                setImageLabelContent(new ImageIcon(image));
+            }, "Drawing");
+            thread.start();
+        } catch (RuntimeException e) {
+            setImageLabelContent(e.getMessage());
+        }
     }
 
     private void setImageLabelContent(String text) {
