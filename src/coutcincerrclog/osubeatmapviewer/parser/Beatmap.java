@@ -6,10 +6,7 @@ import coutcincerrclog.osubeatmapviewer.parser.hitobjects.generic.Hold;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.generic.Slider;
 import coutcincerrclog.osubeatmapviewer.parser.hitobjects.generic.Spinner;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Beatmap {
 
@@ -95,4 +92,27 @@ public class Beatmap {
         for (int i = 0; i < processedHitObjects.size(); ++i)
             processedHitObjects.get(i).index = i;
     }
+
+    public double sliderVelocityAt(int time) {
+        double beatLength = beatLengthAt(time);
+        if (beatLength > 0)
+            return ((100 * sliderMultiplier) / sliderTickRate) * sliderTickRate * (1000F / beatLength);
+        return ((100 * sliderMultiplier) / sliderTickRate) * sliderTickRate;
+    }
+
+    public float bpmMultiplierAt(double time) {
+        if (timingPoints == null || timingPoints.isEmpty())
+            return 1;
+        TimingPoint timingPoint = null;
+        for (TimingPoint point : timingPoints)
+            if (point.time <= time)
+                timingPoint = point;
+        if (timingPoint == null)
+            timingPoint = timingPoints.get(0);
+        if (timingPoint.uninherited)
+            return 1;
+        else
+            return Math.max(10, Math.min(1000, (float) -timingPoint.beatLength)) / 100f;
+    }
+
 }

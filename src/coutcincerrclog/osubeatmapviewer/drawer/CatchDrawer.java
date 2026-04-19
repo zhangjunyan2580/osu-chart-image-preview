@@ -23,7 +23,7 @@ public class CatchDrawer extends Drawer {
     public static final int BOTTOM_PADDING = 10;
 
     public static final int SECTION_SPACE = 70;
-    public static final int SECTION_WIDTH = 300;
+    public static final int SECTION_WIDTH = 192;
     public static final int SECTION_BORDER_WIDTH = 1;
     public static final int MEASURE_LINE_HEIGHT = 1;
     public static final int TIMING_LENGTH = 50;
@@ -31,21 +31,23 @@ public class CatchDrawer extends Drawer {
     public static final int LEFT_PADDING = 30;
     public static final int RIGHT_PADDING = 30;
 
-    public static final int CATCHER_Y = 340;
+    public static final int CATCHER_Y = 440;
     public static final int GAME_FIELD_WIDTH = 512;
-    public static final int WINDOW_WIDTH = 853;
+    public static final int WINDOW_WIDTH = 640;
 
-    public static final double FRUIT_BASE_SIZE = 256. / 3;
+    public static final double FRUIT_BASE_SIZE = 64;
 
     public static final Color BACKGROUND_COLOR = Color.BLACK;
     public static final Color SECTION_BORDER_COLOR = Color.WHITE;
-    public static final Color DEFAULT_FRUIT_BORDER_COLOR = Color.WHITE;
-    public static final Color BANANA_COLOR = new Color(0xFEF743);
-
     public static final Color MEASURE_LINE_COLOR = Color.WHITE;
     public static final Color UNINHERITED_TIMING_COLOR = new Color(0xE13030);
 
+    public static final Color DEFAULT_FRUIT_BORDER_COLOR = Color.WHITE;
+    public static final Color BANANA_COLOR = new Color(0xFEF743);
+    public static final Color HYPER_DASH_COLOR = Color.RED;
+
     public static final Area FRUIT_BASE_SHAPE;
+    public static final Area HYPER_DASH_BASE_SHAPE;
 
     public static final Font NUMBER_FONT = new Font("Consolas", Font.PLAIN, 12);
 
@@ -54,6 +56,10 @@ public class CatchDrawer extends Drawer {
         Ellipse2D FRUIT_INNER = new Ellipse2D.Double(-0.4, -0.4, 0.8, 0.8);
         FRUIT_BASE_SHAPE = new Area(FRUIT_OUTER);
         FRUIT_BASE_SHAPE.subtract(new Area(FRUIT_INNER));
+
+        Ellipse2D HYPER_DASH_OUTER = new Ellipse2D.Double(-0.55, -0.55, 1.1, 1.1);
+        HYPER_DASH_BASE_SHAPE = new Area(HYPER_DASH_OUTER);
+        HYPER_DASH_BASE_SHAPE.subtract(new Area(FRUIT_OUTER));
     }
 
     public static int getApproachTime(float approachingRate, int mod) {
@@ -81,7 +87,7 @@ public class CatchDrawer extends Drawer {
             firstTimingPoint = new TimingPoint(0, 60000.0 / 150.0, 4, 0, 0, 100, true, 0);
 
         int approachTime = getApproachTime(beatmap.approachRate, settings.modEZHR);
-        double timeForSection = 16 * 60000. * firstTimingPoint.meter / bpm;
+        double timeForSection = 8 * 60000. * firstTimingPoint.meter / bpm;
         double totalY = timeForSection / approachTime * CATCHER_Y;
         int sectionY = (int) Math.ceil(totalY / WINDOW_WIDTH * SECTION_WIDTH);
 
@@ -114,7 +120,7 @@ public class CatchDrawer extends Drawer {
         TimingPoint firstTimingPoint = uninheritedPoints.isEmpty() ? new TimingPoint(0, 60000.0 / 150.0, 4, 0, 0, 100, true, 0) : uninheritedPoints.get(0);
 
         int approachTime = getApproachTime(beatmap.approachRate, settings.modEZHR);
-        double timeForSection = 16 * 60000. * firstTimingPoint.meter / bpm;
+        double timeForSection = 8 * 60000. * firstTimingPoint.meter / bpm;
         double totalY = timeForSection / approachTime * CATCHER_Y;
         int sectionY = (int) Math.ceil(totalY / WINDOW_WIDTH * SECTION_WIDTH);
 
@@ -181,25 +187,40 @@ public class CatchDrawer extends Drawer {
         Area dropletShape = FRUIT_BASE_SHAPE.createTransformedArea(AffineTransform.getScaleInstance(dropletSize, dropletSize));
         Area tinyDropletShape = FRUIT_BASE_SHAPE.createTransformedArea(AffineTransform.getScaleInstance(tinyDropletSize, tinyDropletSize));
 
-        for (HitObject hitObject : beatmap.processedHitObjects) {
+        Area fruitHyperDashShape = HYPER_DASH_BASE_SHAPE.createTransformedArea(AffineTransform.getScaleInstance(fruitSize, fruitSize));
+        Area dropletHyperDashShape = HYPER_DASH_BASE_SHAPE.createTransformedArea(AffineTransform.getScaleInstance(dropletSize, dropletSize));
+
+        for (int i = beatmap.processedHitObjects.size() - 1; i >= 0; --i) {
+            HitObject hitObject = beatmap.processedHitObjects.get(i);
             if (hitObject instanceof CatchHitObject) {
                 CatchHitObject catchHitObject = (CatchHitObject) hitObject;
                 Vec2D coord = getDrawCoordinates(hitObject.time, startTime, timeForSection, approachTime);
                 int x = getSectionStartX(coord.x) + getOffsetX(catchHitObject.x);
+                AffineTransform translate = AffineTransform.getTranslateInstance(x, coord.y);
                 if (hitObject instanceof CatchHitCircle) {
-                    Area translated = fruitShape.createTransformedArea(AffineTransform.getTranslateInstance(x, coord.y));
+                    Area translated = fruitShape.createTransformedArea(translate);
                     g.setColor(DEFAULT_FRUIT_BORDER_COLOR);
                     g.fill(translated);
+                    if (catchHitObject.hyperDash) {
+                        translated = fruitHyperDashShape.createTransformedArea(translate);
+                        g.setColor(HYPER_DASH_COLOR);
+                        g.fill(translated);
+                    }
                 } else if (hitObject instanceof CatchDroplet) {
-                    Area translated = dropletShape.createTransformedArea(AffineTransform.getTranslateInstance(x, coord.y));
+                    Area translated = dropletShape.createTransformedArea(translate);
                     g.setColor(DEFAULT_FRUIT_BORDER_COLOR);
                     g.fill(translated);
+                    if (catchHitObject.hyperDash) {
+                        translated = dropletHyperDashShape.createTransformedArea(translate);
+                        g.setColor(HYPER_DASH_COLOR);
+                        g.fill(translated);
+                    }
                 } else if (hitObject instanceof CatchTinyDroplet) {
-                    Area translated = tinyDropletShape.createTransformedArea(AffineTransform.getTranslateInstance(x, coord.y));
+                    Area translated = tinyDropletShape.createTransformedArea(translate);
                     g.setColor(DEFAULT_FRUIT_BORDER_COLOR);
                     g.fill(translated);
                 } else if (hitObject instanceof CatchBanana) {
-                    Area translated = fruitShape.createTransformedArea(AffineTransform.getTranslateInstance(x, coord.y));
+                    Area translated = fruitShape.createTransformedArea(translate);
                     g.setColor(BANANA_COLOR);
                     g.fill(translated);
                 }
@@ -217,7 +238,7 @@ public class CatchDrawer extends Drawer {
         double remain = (1 - (totalSection - section)) * timeForSection;
         int ySection = (int) Math.round(remain / approachTime * CATCHER_Y * SECTION_WIDTH / WINDOW_WIDTH);
         if (ySection <= 1) {
-            ySection = (int) Math.round((double) timeForSection * CATCHER_Y * SECTION_WIDTH / (WINDOW_WIDTH * approachTime));
+            ySection = (int) Math.round(timeForSection * CATCHER_Y * SECTION_WIDTH / (WINDOW_WIDTH * approachTime));
             ++section;
         }
         return new Vec2D(section, ySection + TOP_PADDING);

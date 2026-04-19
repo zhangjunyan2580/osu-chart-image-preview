@@ -93,6 +93,7 @@ public class TaikoConverter extends HitObjectConverter {
                 while (maxRate > 120)
                     maxRate /= 2;
 
+                drumroll.tickTimes.clear();
                 boolean endpointHittable =
                         hitObject.index == beatmap.processedHitObjects.size() - 1 ||
                         beatmap.processedHitObjects.get(hitObject.index + 1).time - (drumroll.endTime + (int) maxRate) > (int) maxRate;
